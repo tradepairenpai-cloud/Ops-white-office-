@@ -1,0 +1,219 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+  }
+
+  html {
+    font-family: 'Sarabun', system-ui, sans-serif;
+    background-color: #F6F8FC;
+  }
+
+  body {
+    margin: 0;
+    padding: 0;
+    overflow-x: hidden;
+    background-color: #F6F8FC;
+  }
+
+  #root {
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    min-height: 100vh;
+    background: linear-gradient(135deg, #e8f0fe 0%, #f6f8fc 50%, #eef5ff 100%);
+  }
+}
+
+@layer components {
+  .phone-frame {
+    width: 100%;
+    max-width: 430px;
+    min-height: 100vh;
+    background-color: #F6F8FC;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .card {
+    @apply bg-white rounded-3xl shadow-card p-4;
+  }
+
+  .card-sm {
+    @apply bg-white rounded-2xl shadow-soft p-3;
+  }
+
+  .btn-primary {
+    @apply bg-primary text-white rounded-2xl py-3 px-6 font-semibold
+           active:scale-95 transition-transform duration-150 shadow-soft;
+  }
+
+  .btn-ghost {
+    @apply bg-primary-light text-primary rounded-2xl py-2.5 px-5 font-semibold
+           active:scale-95 transition-transform duration-150;
+  }
+
+  .badge {
+    @apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold;
+  }
+
+  .progress-bar {
+    @apply h-2 rounded-full bg-gray-100 overflow-hidden;
+  }
+
+  .progress-fill {
+    @apply h-full rounded-full transition-all duration-700 ease-out;
+  }
+
+  .tab-active {
+    @apply text-primary;
+  }
+
+  .tab-inactive {
+    @apply text-gray-400;
+  }
+
+  .screen-content {
+    @apply px-4 pb-28 pt-2 space-y-4 overflow-y-auto;
+    height: calc(100vh - 160px);
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .screen-content::-webkit-scrollbar {
+    display: none;
+  }
+
+  .ripple {
+    @apply relative overflow-hidden;
+  }
+
+  .ripple::after {
+    content: '';
+    @apply absolute inset-0 rounded-inherit bg-white opacity-0 transition-opacity duration-200;
+  }
+
+  .ripple:active::after {
+    @apply opacity-20;
+  }
+
+  .gradient-primary {
+    background: linear-gradient(135deg, #4F8CFF 0%, #7B5EA7 100%);
+  }
+
+  .gradient-success {
+    background: linear-gradient(135deg, #22C55E 0%, #16A34A 100%);
+  }
+
+  .gradient-warning {
+    background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%);
+  }
+
+  .gradient-danger {
+    background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%);
+  }
+
+  .gradient-purple {
+    background: linear-gradient(135deg, #8B5CF6 0%, #6D28D9 100%);
+  }
+
+  .gradient-teal {
+    background: linear-gradient(135deg, #14B8A6 0%, #0D9488 100%);
+  }
+
+  .glass {
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.6);
+  }
+
+  .section-header {
+    @apply flex items-center justify-between mb-3;
+  }
+
+  .section-title {
+    @apply text-base font-bold text-text-main;
+  }
+
+  .section-action {
+    @apply text-sm font-semibold text-primary;
+  }
+
+  .stat-card {
+    @apply flex-1 bg-white rounded-2xl p-3 shadow-soft flex flex-col gap-1;
+  }
+
+  .icon-box {
+    @apply w-10 h-10 rounded-2xl flex items-center justify-center flex-shrink-0;
+  }
+
+  .icon-box-sm {
+    @apply w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0;
+  }
+}
+
+@layer utilities {
+  .safe-top {
+    padding-top: env(safe-area-inset-top);
+  }
+
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .scrollbar-hide {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* Smooth transitions for tab switching */
+.tab-panel-enter {
+  opacity: 0;
+  transform: translateY(8px);
+}
+
+.tab-panel-enter-active {
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 300ms ease-out, transform 300ms ease-out;
+}
+
+/* Water drop animation */
+@keyframes waterDrop {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.15); }
+  100% { transform: scale(1); }
+}
+
+.water-active {
+  animation: waterDrop 0.3s ease-out;
+}
+
+/* Circular progress */
+.circle-progress {
+  transform: rotate(-90deg);
+  transform-origin: center;
+}
+
+/* Chat bubble */
+.chat-bubble-ai {
+  @apply bg-white rounded-3xl rounded-tl-sm shadow-soft p-4 max-w-xs;
+}
+
+.chat-bubble-user {
+  @apply bg-primary text-white rounded-3xl rounded-tr-sm p-4 max-w-xs ml-auto;
+}
