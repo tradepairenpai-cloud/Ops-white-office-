@@ -5,11 +5,15 @@ import {
   Flame, Wind, Thermometer, Check, Plus
 } from 'lucide-react'
 import type { Task } from '../../types'
-import { sampleTasks, sampleWeather, sampleHealth, monthlyBudget } from '../../data/sampleData'
+import { sampleTasks, sampleWeather } from '../../data/sampleData'
 import { useDateTime } from '../../hooks/useDateTime'
+import { useRealtime } from '../../context/RealtimeContext'
+import LiveDashboard from '../LiveDashboard'
+import AnimatedNumber from '../AnimatedNumber'
 
 export default function HomeScreen() {
   const { dateString, timeString, greeting } = useDateTime()
+  const { health, finance } = useRealtime()
   const [tasks, setTasks] = useState<Task[]>(sampleTasks)
 
   const toggleTask = (id: string) => {
@@ -20,12 +24,12 @@ export default function HomeScreen() {
   const completedCount = tasks.filter(t => t.done).length
   const totalCount = tasks.length
 
-  const stepsPercent = Math.round((sampleHealth.steps / sampleHealth.stepsGoal) * 100)
-  const waterPercent = Math.round((sampleHealth.water / sampleHealth.waterGoal) * 100)
-  const sleepPercent = Math.round((sampleHealth.sleep / sampleHealth.sleepGoal) * 100)
+  const stepsPercent = Math.round((health.steps / health.stepsGoal) * 100)
+  const waterPercent = Math.round((health.water / health.waterGoal) * 100)
+  const sleepPercent = Math.round((health.sleep / health.sleepGoal) * 100)
 
-  const spent = monthlyBudget.expense
-  const budget = monthlyBudget.budget
+  const spent = finance.expense
+  const budget = finance.budget
   const budgetPercent = Math.round((spent / budget) * 100)
 
   const priorityColor: Record<string, string> = {
@@ -87,6 +91,9 @@ export default function HomeScreen() {
           <p className="text-white/80 text-sm mt-2">{sampleWeather.condition} · รู้สึกเหมือน {sampleWeather.feelsLike}°C</p>
         </div>
       </div>
+
+      {/* Live realtime dashboard */}
+      <LiveDashboard />
 
       {/* Task Progress */}
       <div className="card animate-slide-up" style={{ animationDelay: '0.05s' }}>
@@ -158,7 +165,7 @@ export default function HomeScreen() {
             <div className="icon-box-sm bg-primary-light w-8 h-8 rounded-xl flex items-center justify-center mb-1">
               <Footprints size={16} className="text-primary" />
             </div>
-            <p className="text-lg font-bold text-text-main">{sampleHealth.steps.toLocaleString()}</p>
+            <p className="text-lg font-bold text-text-main"><AnimatedNumber value={health.steps} /></p>
             <p className="text-xs text-text-sub">ก้าว</p>
             <div className="progress-bar mt-2">
               <div className="progress-fill bg-primary" style={{ width: `${stepsPercent}%` }} />
@@ -171,7 +178,7 @@ export default function HomeScreen() {
             <div className="icon-box-sm bg-blue-50 w-8 h-8 rounded-xl flex items-center justify-center mb-1">
               <Droplets size={16} className="text-blue-500" />
             </div>
-            <p className="text-lg font-bold text-text-main">{sampleHealth.water}/{sampleHealth.waterGoal}</p>
+            <p className="text-lg font-bold text-text-main">{health.water}/{health.waterGoal}</p>
             <p className="text-xs text-text-sub">แก้วน้ำ</p>
             <div className="progress-bar mt-2">
               <div className="progress-fill bg-blue-500" style={{ width: `${waterPercent}%` }} />
@@ -184,7 +191,7 @@ export default function HomeScreen() {
             <div className="icon-box-sm bg-purple-50 w-8 h-8 rounded-xl flex items-center justify-center mb-1">
               <Moon size={16} className="text-purple-500" />
             </div>
-            <p className="text-lg font-bold text-text-main">{sampleHealth.sleep}h</p>
+            <p className="text-lg font-bold text-text-main">{health.sleep}h</p>
             <p className="text-xs text-text-sub">การนอน</p>
             <div className="progress-bar mt-2">
               <div className="progress-fill bg-purple-500" style={{ width: `${sleepPercent}%` }} />
@@ -201,12 +208,12 @@ export default function HomeScreen() {
           <div className="flex-1">
             <div className="flex items-center justify-between mb-1">
               <p className="text-sm font-semibold text-text-main">แคลอรี่</p>
-              <p className="text-sm font-bold text-orange-500">{sampleHealth.calories}/{sampleHealth.caloriesGoal} kcal</p>
+              <p className="text-sm font-bold text-orange-500"><AnimatedNumber value={health.calories} />/{health.caloriesGoal} kcal</p>
             </div>
             <div className="progress-bar">
               <div
                 className="progress-fill bg-orange-400"
-                style={{ width: `${(sampleHealth.calories / sampleHealth.caloriesGoal) * 100}%` }}
+                style={{ width: `${(health.calories / health.caloriesGoal) * 100}%` }}
               />
             </div>
           </div>
@@ -229,7 +236,7 @@ export default function HomeScreen() {
               <p className="text-xs font-semibold text-success">รายรับ</p>
             </div>
             <p className="text-xl font-bold text-text-main">
-              ฿{monthlyBudget.income.toLocaleString()}
+              ฿<AnimatedNumber value={finance.income} />
             </p>
           </div>
           <div className="p-3 bg-danger-light rounded-2xl">
@@ -238,7 +245,7 @@ export default function HomeScreen() {
               <p className="text-xs font-semibold text-danger">รายจ่าย</p>
             </div>
             <p className="text-xl font-bold text-text-main">
-              ฿{monthlyBudget.expense.toLocaleString()}
+              ฿<AnimatedNumber value={finance.expense} />
             </p>
           </div>
         </div>

@@ -5,6 +5,8 @@ import {
 } from 'lucide-react'
 import { sampleTransactions, monthlyBudget } from '../../data/sampleData'
 import type { Transaction } from '../../types'
+import { useRealtime } from '../../context/RealtimeContext'
+import AnimatedNumber from '../AnimatedNumber'
 
 const MONTHS_SHORT = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.']
 
@@ -33,10 +35,11 @@ function SavingsRing({ value, max }: { value: number; max: number }) {
 }
 
 export default function FinanceScreen() {
+  const { finance } = useRealtime()
   const [activeFilter, setActiveFilter] = useState<'all' | 'income' | 'expense'>('all')
 
-  const savings = monthlyBudget.income - monthlyBudget.expense
-  const savingsRate = Math.round((savings / monthlyBudget.income) * 100)
+  const savings = finance.income - finance.expense
+  const savingsRate = Math.round((savings / finance.income) * 100)
 
   const filtered = sampleTransactions.filter(t => activeFilter === 'all' || t.type === activeFilter)
 
@@ -62,7 +65,7 @@ export default function FinanceScreen() {
             <p className="text-white/70 text-sm font-medium">ยอดคงเหลือ</p>
           </div>
           <p className="text-4xl font-bold tracking-tight">
-            ฿{savings.toLocaleString()}
+            ฿<AnimatedNumber value={savings} />
           </p>
           <p className="text-white/70 text-sm mt-1">มิถุนายน 2569</p>
 
@@ -72,14 +75,14 @@ export default function FinanceScreen() {
                 <ArrowUpRight size={14} className="text-green-300" />
                 <span className="text-white/80 text-xs">รายรับ</span>
               </div>
-              <p className="text-lg font-bold text-white">฿{monthlyBudget.income.toLocaleString()}</p>
+              <p className="text-lg font-bold text-white">฿<AnimatedNumber value={finance.income} /></p>
             </div>
             <div className="bg-white/15 rounded-2xl p-3">
               <div className="flex items-center gap-1.5 mb-1">
                 <ArrowDownRight size={14} className="text-red-300" />
                 <span className="text-white/80 text-xs">รายจ่าย</span>
               </div>
-              <p className="text-lg font-bold text-white">฿{monthlyBudget.expense.toLocaleString()}</p>
+              <p className="text-lg font-bold text-white">฿<AnimatedNumber value={finance.expense} /></p>
             </div>
           </div>
         </div>
@@ -88,7 +91,7 @@ export default function FinanceScreen() {
       {/* Savings Rate */}
       <div className="card flex items-center gap-4">
         <div className="relative flex-shrink-0">
-          <SavingsRing value={savings} max={monthlyBudget.income} />
+          <SavingsRing value={savings} max={finance.income} />
           <div className="absolute inset-0 flex flex-col items-center justify-center">
             <PiggyBank size={18} className="text-success" />
             <p className="text-xs font-bold text-success mt-0.5">{savingsRate}%</p>

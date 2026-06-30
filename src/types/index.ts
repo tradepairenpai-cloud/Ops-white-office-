@@ -64,3 +64,54 @@ export interface Meal {
   time: string
   type: 'breakfast' | 'lunch' | 'dinner' | 'snack'
 }
+
+// ── Realtime / AI-agent layer ───────────────────────────────────────────────
+
+export type AgentStatus = 'idle' | 'thinking' | 'active'
+
+export type ActivityTone = 'primary' | 'success' | 'warning' | 'danger'
+
+export interface ActivityItem {
+  id: string
+  icon: string
+  text: string
+  time: string
+  tone: ActivityTone
+}
+
+export interface LiveHealth {
+  steps: number
+  stepsGoal: number
+  water: number
+  waterGoal: number
+  sleep: number
+  sleepGoal: number
+  calories: number
+  caloriesGoal: number
+  heartRate: number
+  heartRateHistory: number[]
+}
+
+export interface LiveFinance {
+  income: number
+  expense: number
+  budget: number
+}
+
+export interface AgentInsight {
+  status: AgentStatus
+  message: string
+  updatedAt: string
+}
+
+export interface RealtimeValue {
+  live: boolean
+  tick: number
+  clock: string
+  health: LiveHealth
+  finance: LiveFinance
+  activity: ActivityItem[]
+  agent: AgentInsight
+  addWater: (n?: number) => void
+  setWater: (n: number) => void
+}

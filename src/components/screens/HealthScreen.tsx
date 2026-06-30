@@ -1,11 +1,11 @@
-import { useState } from 'react'
 import {
   Footprints, Droplets, Moon, Flame, Heart,
   Plus, Minus, ChevronRight, Zap, Trophy
 } from 'lucide-react'
-import { sampleHealth, weeklyStepsData, sleepData, sampleMeals, daysOfWeek } from '../../data/sampleData'
-
-const WATER_GOAL = 8
+import { weeklyStepsData, sleepData, sampleMeals, daysOfWeek } from '../../data/sampleData'
+import { useRealtime } from '../../context/RealtimeContext'
+import AnimatedNumber from '../AnimatedNumber'
+import Sparkline from '../Sparkline'
 
 function CircularProgress({ value, max, color, size = 80, strokeWidth = 8 }: {
   value: number; max: number; color: string; size?: number; strokeWidth?: number
@@ -46,12 +46,13 @@ function MiniBar({ value, max, color, label }: { value: number; max: number; col
 }
 
 export default function HealthScreen() {
-  const [water, setWater] = useState(sampleHealth.water)
+  const { health, addWater, setWater } = useRealtime()
+  const water = health.water
+  const WATER_GOAL = health.waterGoal
 
-  const addWater = () => setWater(w => Math.min(w + 1, WATER_GOAL))
-  const removeWater = () => setWater(w => Math.max(w - 1, 0))
+  const removeWater = () => setWater(water - 1)
 
-  const stepsPercent = Math.round((sampleHealth.steps / sampleHealth.stepsGoal) * 100)
+  const stepsPercent = Math.round((health.steps / health.stepsGoal) * 100)
 
   const mealTypeLabel: Record<string, string> = {
     breakfast: 'มื้อเช้า',
@@ -84,12 +85,22 @@ export default function HealthScreen() {
         <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-8 translate-x-8" />
         <div className="relative flex items-center gap-4">
           <div className="w-16 h-16 bg-white/20 rounded-3xl flex items-center justify-center">
-            <Heart size={28} className="text-white animate-pulse-soft" />
+            <Heart size={28} className="text-white animate-heartbeat" fill="currentColor" />
           </div>
-          <div>
-            <p className="text-white/80 text-sm">อัตราการเต้นหัวใจ</p>
-            <p className="text-4xl font-bold">{sampleHealth.heartRate} <span className="text-xl font-normal">bpm</span></p>
-            <p className="text-white/70 text-sm mt-0.5">ปกติ · ขณะพัก</p>
+          <div className="flex-1">
+            <div className="flex items-center gap-2">
+              <p className="text-white/80 text-sm">อัตราการเต้นหัวใจ</p>
+              <span className="flex items-center gap-1 bg-white/20 rounded-lg px-2 py-0.5">
+                <span className="w-1.5 h-1.5 bg-white rounded-full live-dot" />
+                <span className="text-[10px] font-bold">LIVE</span>
+              </span>
+            </div>
+            <p className="text-4xl font-bold">
+              <AnimatedNumber value={health.heartRate} duration={500} /> <span className="text-xl font-normal">bpm</span>
+            </p>
+            <div className="-mx-1 mt-1">
+              <Sparkline data={health.heartRateHistory} color="rgba(255,255,255,0.85)" width={180} height={30} />
+            </div>
           </div>
         </div>
       </div>
@@ -99,29 +110,29 @@ export default function HealthScreen() {
         {/* Steps */}
         <div className="card flex-1 flex flex-col items-center py-4">
           <div className="relative">
-            <CircularProgress value={sampleHealth.steps} max={sampleHealth.stepsGoal} color="#4F8CFF" size={90} />
+            <CircularProgress value={health.steps} max={health.stepsGoal} color="#4F8CFF" size={90} />
             <div className="absolute inset-0 flex flex-col items-center justify-center">
               <Footprints size={16} className="text-primary mb-0.5" />
               <p className="text-xs font-bold text-text-main leading-none">{stepsPercent}%</p>
             </div>
           </div>
-          <p className="text-xl font-bold text-text-main mt-2">{sampleHealth.steps.toLocaleString()}</p>
-          <p className="text-xs text-text-sub">/ {sampleHealth.stepsGoal.toLocaleString()} ก้าว</p>
+          <p className="text-xl font-bold text-text-main mt-2"><AnimatedNumber value={health.steps} /></p>
+          <p className="text-xs text-text-sub">/ {health.stepsGoal.toLocaleString()} ก้าว</p>
         </div>
 
         {/* Calories */}
         <div className="card flex-1 flex flex-col items-center py-4">
           <div className="relative">
-            <CircularProgress value={sampleHealth.calories} max={sampleHealth.caloriesGoal} color="#F59E0B" size={90} />
+            <CircularProgress value={health.calories} max={health.caloriesGoal} color="#F59E0B" size={90} />
             <div className="absolute inset-0 flex flex-col items-center justify-center">
               <Flame size={16} className="text-warning mb-0.5" />
               <p className="text-xs font-bold text-text-main leading-none">
-                {Math.round((sampleHealth.calories / sampleHealth.caloriesGoal) * 100)}%
+                {Math.round((health.calories / health.caloriesGoal) * 100)}%
               </p>
             </div>
           </div>
-          <p className="text-xl font-bold text-text-main mt-2">{sampleHealth.calories}</p>
-          <p className="text-xs text-text-sub">/ {sampleHealth.caloriesGoal} kcal</p>
+          <p className="text-xl font-bold text-text-main mt-2"><AnimatedNumber value={health.calories} /></p>
+          <p className="text-xs text-text-sub">/ {health.caloriesGoal} kcal</p>
         </div>
       </div>
 
@@ -140,7 +151,7 @@ export default function HealthScreen() {
               <Minus size={14} className="text-text-sub" />
             </button>
             <button
-              onClick={addWater}
+              onClick={() => addWater()}
               className="w-8 h-8 rounded-xl bg-blue-500 flex items-center justify-center active:scale-90 transition-transform shadow-soft"
             >
               <Plus size={14} className="text-white" />
@@ -184,7 +195,7 @@ export default function HealthScreen() {
         <div className="section-header">
           <div>
             <h2 className="section-title">การนอนหลับ</h2>
-            <p className="text-xs text-text-sub mt-0.5">คืนที่ผ่านมา {sampleHealth.sleep} ชั่วโมง</p>
+            <p className="text-xs text-text-sub mt-0.5">คืนที่ผ่านมา {health.sleep} ชั่วโมง</p>
           </div>
           <div className="flex items-center gap-1.5 bg-purple-50 rounded-xl px-3 py-1.5">
             <Moon size={14} className="text-purple-500" />
@@ -205,7 +216,7 @@ export default function HealthScreen() {
             <p className="text-xs text-text-sub">เข้านอน</p>
           </div>
           <div className="bg-purple-50 rounded-2xl p-3 text-center">
-            <p className="text-base font-bold text-purple-600">{sampleHealth.sleep}h</p>
+            <p className="text-base font-bold text-purple-600">{health.sleep}h</p>
             <p className="text-xs text-text-sub">ระยะเวลา</p>
           </div>
           <div className="bg-purple-50 rounded-2xl p-3 text-center">

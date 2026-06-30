@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect } from 'react'
 import { Send, Mic, Sparkles, RefreshCw, ChevronRight } from 'lucide-react'
-import { sampleMessages } from '../../data/sampleData'
-import type { ChatMessage } from '../../types'
+import type { ChatMessage, LiveFinance, LiveHealth } from '../../types'
+import { useRealtime } from '../../context/RealtimeContext'
+import TypewriterText from '../TypewriterText'
 
 const QUICK_PROMPTS = [
   'สรุปงานวันนี้',
@@ -12,11 +13,37 @@ const QUICK_PROMPTS = [
   'สรุปสัปดาห์',
 ]
 
-const AI_RESPONSES: Record<string, string> = {
-  'สรุปงานวันนี้': 'วันนี้คุณมีงานทั้งหมด 6 รายการ เสร็จแล้ว 2 รายการ (จ่ายค่าน้ำค่าไฟ, ออกกำลังกาย) \n\nงานที่ยังค้างอยู่:\n• 09:00 ประชุมทีมพัฒนา ⚡ด่วน\n• 12:00 ส่งรายงานรายเดือน ⚡ด่วน\n• 19:00 โทรหาคุณแม่\n• 21:00 อ่านหนังสือ\n\nแนะนำให้เริ่มจากงานด่วนก่อนเลยครับ 💪',
-  'วางแผนสุขภาพ': 'จากข้อมูลสุขภาพของคุณวันนี้:\n✅ นอนหลับ 7.5 ชั่วโมง (ดี)\n⚠️ ก้าว 6,842 จาก 10,000 (ขาดอีก 3,158)\n💧 ดื่มน้ำ 5/8 แก้ว\n\nแนะนำ:\n• เดินเพิ่มช่วงเย็นหลังงาน ~30 นาที\n• ดื่มน้ำอีก 3 แก้วก่อนเที่ยงคืน\n• พยายามเข้านอนก่อน 23:00 ครับ 🌙',
-  'ตรวจสอบการเงิน': 'สรุปการเงินเดือนมิถุนายน:\n💰 รายรับ: ฿53,500\n💸 รายจ่าย: ฿18,420\n💚 คงเหลือ: ฿35,080 (ออมได้ 65.6%)\n\nหมวดที่ใช้สูงสุด: อาหาร (฿7,200)\nงบประมาณยังไม่เกินเป้าหมาย 🎉\n\nถ้าต้องการประหยัดเพิ่ม ลองทำอาหารกินเองสัปดาห์ละ 3 มื้อครับ 🍳',
-  'แนะนำมื้ออาหาร': 'จากแคลอรี่ที่ทานไปแล้ว 1,640 kcal\nเป้าหมาย: 2,000 kcal\nเหลืออีก: ~360 kcal\n\nมื้อเย็นแนะนำ:\n🥗 สลัดไก่ย่าง (~300 kcal)\n🍚 ข้าวกล้องหรือข้าวไรซ์เบอร์รี่\n🥦 ผักนึ่ง\n\nหลีกเลี่ยงของทอดและอาหารหนักมื้อเย็นเพื่อคุณภาพการนอนที่ดีครับ 😊',
+const nowStamp = () =>
+  new Date().toLocaleTimeString('th', { hour: '2-digit', minute: '2-digit' })
+
+// Builds an answer from the user's *live* metrics so the assistant behaves like
+// an agent watching real-time data rather than returning canned text.
+function buildResponse(text: string, h: LiveHealth, f: LiveFinance): string {
+  const stepsLeft = Math.max(0, h.stepsGoal - h.steps)
+  const calLeft = Math.max(0, h.caloriesGoal - h.calories)
+  const savings = f.income - f.expense
+  const savingsRate = Math.round((savings / f.income) * 100)
+
+  switch (text) {
+    case 'สรุปงานวันนี้':
+      return 'วันนี้คุณมีงานทั้งหมด 6 รายการ เสร็จแล้ว 2 รายการ\n\nงานที่ยังค้างอยู่:\n• 09:00 ประชุมทีมพัฒนา ⚡ด่วน\n• 12:00 ส่งรายงานรายเดือน ⚡ด่วน\n• 19:00 โทรหาคุณแม่\n\nแนะนำให้เริ่มจากงานด่วนก่อนเลยครับ 💪'
+    case 'วางแผนสุขภาพ':
+      return `ข้อมูลสุขภาพเรียลไทม์ของคุณตอนนี้:\n👣 ก้าว ${h.steps.toLocaleString()}/${h.stepsGoal.toLocaleString()} (ขาดอีก ${stepsLeft.toLocaleString()})\n💧 น้ำ ${h.water}/${h.waterGoal} แก้ว\n❤️ หัวใจ ${h.heartRate} bpm\n\nแนะนำ: ${stepsLeft > 0 ? `เดินเพิ่มอีก ${stepsLeft.toLocaleString()} ก้าว` : 'เดินครบเป้าแล้ว เยี่ยม!'} และ${h.water < h.waterGoal ? `ดื่มน้ำอีก ${h.waterGoal - h.water} แก้ว` : 'ดื่มน้ำครบแล้ว'} ครับ 🌙`
+    case 'ตรวจสอบการเงิน':
+      return `สรุปการเงินแบบเรียลไทม์:\n💰 รายรับ ฿${f.income.toLocaleString()}\n💸 รายจ่าย ฿${f.expense.toLocaleString()}\n💚 คงเหลือ ฿${savings.toLocaleString()} (ออม ${savingsRate}%)\n\n${savingsRate >= 30 ? 'อัตราการออมเกินเป้า 30% แล้ว เยี่ยมมากครับ 🎉' : 'ลองคุมรายจ่ายเพิ่มเพื่อให้ถึงเป้าออม 30% ครับ 🍳'}`
+    case 'แนะนำมื้ออาหาร':
+      return `ตอนนี้ทานไปแล้ว ${h.calories.toLocaleString()} kcal จากเป้า ${h.caloriesGoal.toLocaleString()} kcal\nเหลืออีก ~${calLeft.toLocaleString()} kcal\n\nมื้อถัดไปแนะนำ:\n🥗 สลัดไก่ย่าง (~300 kcal)\n🍚 ข้าวกล้อง\n🥦 ผักนึ่ง\n\nเลี่ยงของทอดเพื่อการนอนที่ดีครับ 😊`
+    case 'วิเคราะห์การนอน':
+      return `คืนที่ผ่านมาคุณนอน ${h.sleep} ชม. จากเป้า ${h.sleepGoal} ชม.\n${h.sleep >= h.sleepGoal ? 'นอนได้ตามเป้า ร่างกายฟื้นตัวดีครับ 🌙' : `ขาดอีก ${(h.sleepGoal - h.sleep).toFixed(1)} ชม. คืนนี้ลองเข้านอนเร็วขึ้นนะครับ 😴`}`
+    case 'สรุปสัปดาห์':
+      return `ภาพรวมตอนนี้:\n👣 ${h.steps.toLocaleString()} ก้าว\n❤️ หัวใจ ${h.heartRate} bpm\n💰 ออมได้ ${savingsRate}% ของรายรับ\n\nทำได้ดีมากครับ รักษาจังหวะนี้ไว้ 💪`
+    default:
+      return `ผมกำลังดูข้อมูลเรียลไทม์ของคุณอยู่ครับ 🤖\nตอนนี้: ${h.steps.toLocaleString()} ก้าว · ${h.heartRate} bpm · คงเหลือ ฿${savings.toLocaleString()}\n\n"${text}" — ผมจะช่วยวิเคราะห์ให้นะครับ`
+  }
+}
+
+function greeting(h: LiveHealth, f: LiveFinance): string {
+  return `สวัสดีครับ 👋 ผมเป็น AI Agent ที่คอยติดตามข้อมูลของคุณแบบเรียลไทม์\n\nสถานะตอนนี้:\n👣 ${h.steps.toLocaleString()} ก้าว · ❤️ ${h.heartRate} bpm\n💰 คงเหลือ ฿${(f.income - f.expense).toLocaleString()}\n\nมีอะไรให้ช่วยวิเคราะห์ไหมครับ?`
 }
 
 function TypingIndicator() {
@@ -37,7 +64,10 @@ function TypingIndicator() {
 }
 
 export default function AIAssistantScreen() {
-  const [messages, setMessages] = useState<ChatMessage[]>(sampleMessages)
+  const { health, finance, agent } = useRealtime()
+  const [messages, setMessages] = useState<ChatMessage[]>(() => [
+    { id: 'agent-hello', role: 'ai', content: greeting(health, finance), timestamp: nowStamp() },
+  ])
   const [input, setInput] = useState('')
   const [isTyping, setIsTyping] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -48,21 +78,33 @@ export default function AIAssistantScreen() {
     }
   }, [messages, isTyping])
 
+  // Proactive agent insight shortly after opening the chat — pushed once.
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setMessages(prev => [
+        ...prev,
+        { id: 'agent-proactive', role: 'ai', content: `💡 ข้อสังเกตเรียลไทม์: ${agent.message}`, timestamp: nowStamp() },
+      ])
+    }, 2500)
+    return () => clearTimeout(t)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  const lastAiId = [...messages].reverse().find(m => m.role === 'ai')?.id
+
   const sendMessage = (text: string) => {
     if (!text.trim()) return
     const newMsg: ChatMessage = {
       id: Date.now().toString(),
       role: 'user',
       content: text.trim(),
-      timestamp: new Date().toLocaleTimeString('th', { hour: '2-digit', minute: '2-digit' }),
+      timestamp: nowStamp(),
     }
     setMessages(prev => [...prev, newMsg])
     setInput('')
     setIsTyping(true)
 
-    const responseText =
-      AI_RESPONSES[text.trim()] ??
-      `ขอบคุณสำหรับคำถามครับ! ฉันกำลังวิเคราะห์ข้อมูลของคุณ...\n\n"${text.trim()}" เป็นเรื่องที่น่าสนใจมาก ฉันจะช่วยคุณจัดการเรื่องนี้ให้ดีที่สุดครับ 🤖`
+    const responseText = buildResponse(text.trim(), health, finance)
 
     setTimeout(() => {
       setIsTyping(false)
@@ -70,18 +112,18 @@ export default function AIAssistantScreen() {
         id: (Date.now() + 1).toString(),
         role: 'ai',
         content: responseText,
-        timestamp: new Date().toLocaleTimeString('th', { hour: '2-digit', minute: '2-digit' }),
+        timestamp: nowStamp(),
       }
       setMessages(prev => [...prev, aiMsg])
-    }, 1500)
+    }, 1200)
   }
 
   const clearChat = () => {
     setMessages([{
       id: 'reset',
       role: 'ai',
-      content: 'สวัสดีครับ! เริ่มต้นใหม่แล้ว ฉันสามารถช่วยอะไรคุณได้บ้าง? 😊',
-      timestamp: new Date().toLocaleTimeString('th', { hour: '2-digit', minute: '2-digit' }),
+      content: greeting(health, finance),
+      timestamp: nowStamp(),
     }])
   }
 
@@ -95,10 +137,12 @@ export default function AIAssistantScreen() {
               <Sparkles size={18} className="text-white" />
             </div>
             <div>
-              <h1 className="text-base font-bold text-text-main">Daily AI</h1>
+              <h1 className="text-base font-bold text-text-main">Daily AI Agent</h1>
               <div className="flex items-center gap-1.5">
-                <div className="w-1.5 h-1.5 bg-success rounded-full animate-pulse-soft" />
-                <p className="text-xs text-text-sub">ออนไลน์</p>
+                <div className="w-1.5 h-1.5 bg-success rounded-full live-dot" />
+                <p className="text-xs text-text-sub">
+                  {agent.status === 'thinking' ? 'กำลังวิเคราะห์…' : 'ออนไลน์ · เรียลไทม์'}
+                </p>
               </div>
             </div>
           </div>
@@ -151,7 +195,11 @@ export default function AIAssistantScreen() {
             )}
             <div className={`max-w-[75%] ${msg.role === 'user' ? 'items-end' : 'items-start'} flex flex-col gap-1`}>
               <div className={msg.role === 'ai' ? 'chat-bubble-ai' : 'chat-bubble-user'}>
-                <p className="text-sm leading-relaxed whitespace-pre-line">{msg.content}</p>
+                <p className="text-sm leading-relaxed whitespace-pre-line">
+                  {msg.role === 'ai' && msg.id === lastAiId
+                    ? <TypewriterText text={msg.content} />
+                    : msg.content}
+                </p>
               </div>
               <p className={`text-xs text-text-sub px-1 ${msg.role === 'user' ? 'text-right' : ''}`}>
                 {msg.timestamp}
